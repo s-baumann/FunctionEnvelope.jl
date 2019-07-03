@@ -72,8 +72,8 @@ end
 """
 This crawls from one side to the other to get the top function value at each point in a grid.
 """
-function crawler(dd_function::DataFrame, limits::Tuple{T,T}, stepp::R, x_name::Symbol, output_for_envelope::Symbol,
-                 step_right_to_left::Bool = true; do_all_at_ends::Bool = false) where T<:Real where R<:Real
+function crawler(dd_function::DataFrame, limits::Tuple{T,T}, stepp::R, x_name::Symbol, output_for_envelope::Symbol;
+                 step_right_to_left::Bool = true, do_all_at_ends::Bool = false) where T<:Real where R<:Real
     grid = limits[1]:step:limits[2]
     if step_right_to_left grid = reverse(grid) end
     return crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends)
@@ -162,13 +162,18 @@ function get_intercept(dd_eval::DataFrame, increasing_function::Symbol, decreasi
     # Finding roots
     roots = get_intersection_points(s1, s2)
     root_in_interval = roots[(roots .>= interval[1]-10*eps()) .& (roots .<= interval[2]+10*eps())]
-    #roots = get_crossover_in_interval(s1, s2, interval)
-    @assert length(root_in_interval) == 1 "There is not one intercept between splines in the get_intercept function."
-    if abs(interval[2] - interval[1]) < max_interval_width
-        return root_in_interval[1], dd_eval
+    point_to_try = (sum(interval)/2)
+    if length(root_in_interval) == 1 # 2 or 0 roots can happen sometimes if the spline is a bit inaccurate.
+        point_to_try =  (1-bracketing_parameter) * (sum(interval)/2) + bracketing_parameter * (root_in_interval[1])
+        if abs(interval[2] - interval[1]) < max_interval_width
+            return root_in_interval[1], dd_eval
+        end
+    else
+        if abs(interval[2] - interval[1]) < max_interval_width
+            return (sum(interval)/2), dd_eval
+        end
     end
-    # Finding point to try.
-    point_to_try =  (1-bracketing_parameter) * (sum(interval)/2) + bracketing_parameter * (root_in_interval[1])
+    # Evaluation of function.
     result_inc, dd_eval = get_function_value(dd_eval, dd_function, point_to_try, increasing_function, x_name, output_for_envelope)
     #result1, dd_eval = evaluate_function_and_add_to_dd(dd_eval, get_func(dd_function, increasing_function), point_to_try, increasing_function, x_name, output_for_envelope)
     result_dec, dd_eval = get_function_value(dd_eval, dd_function, point_to_try, decreasing_function, x_name, output_for_envelope)
@@ -187,7 +192,7 @@ end
                              grid::Array{R,1} = sort(unique(dd_eval[x_name]))) where R<:Real
 """
 function get_upper_envelope(dd_eval::DataFrame, dd_function::DataFrame, x_name::Symbol, output_for_envelope::Symbol, bracketing_parameter::Real, max_interval_width::Real;
-                                      grid::Array{R,1} = sort(unique(dd_eval[x_name]))) where R<:Real
+                                      grid::Union{StepRangeLen,Array{R,1}} = sort(unique(dd_eval[x_name]))) where R<:Real
     interval_dd = DataFrame(interval_start = grid[1], interval_end = NaN, func = top_function_at_point(dd_eval, x_name, output_for_envelope, grid[1]))
     i = 1 # This is the row index for interval_dd
     for j in 2:length(grid)
@@ -218,5 +223,6 @@ function get_upper_envelope(dd_eval::DataFrame, dd_function::DataFrame, x_name::
         end
     end
     interval_dd[i,:interval_end] = grid[length(grid)]
+    interval_dd[:length] = interval_dd[:interval_end] .- interval_dd[:interval_start]
     return interval_dd, dd_eval
 end
