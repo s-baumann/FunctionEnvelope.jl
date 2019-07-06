@@ -1,9 +1,9 @@
 import Plots.plot
 
-function plot(env::Envelope, variable::Symbol = collect(keys(env.splines_))[1]; points::Bool = false, legend::Symbol = :best)
+function plot(env::Envelope, variable::Symbol = env.output_for_envelope_; points::Bool = true, legend::Symbol = :best)
     func_names = env.dd_function_[:name]
     intervals = size(env.dd_interval_)[1]
-    plt = plot(; xlabel = string(env.x_name), ylabel = string(variable))
+    plt = plot(; xlabel = string(env.x_name_), ylabel = string(variable))
     for i in 1:intervals
         int_func = env.dd_interval_[i, :func]
         int_ends = [env.dd_interval_[i, :interval_start], env.dd_interval_[i, :interval_end]]
@@ -15,7 +15,7 @@ function plot(env::Envelope, variable::Symbol = collect(keys(env.splines_))[1]; 
         end
     end
     if points
-        plt = plot!(plt, env.dd_evals_[env.x_name], env.dd_evals_[variable], seriestype=:scatter; color = :black, label = "points", legend=:none)
+        plt = plot!(plt, env.dd_evals_[env.x_name_], env.dd_evals_[variable], seriestype=:scatter; color = :black, label = "points", legend=:none)
     end
     plt = plot!(plt; legend=legend)
     return plt

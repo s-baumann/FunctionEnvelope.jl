@@ -15,6 +15,7 @@ struct Envelope
              name_d = Dict{Symbol,Schumaker}()
              for func in func_names
                  data = dd_eval[dd_eval[:name] .== func,:]
+                 if sum(ismissing.(data[name])) > 0 continue end
                  schum = Schumaker(data[x_name], data[name])
                  name_d[func] = schum
              end
@@ -43,7 +44,7 @@ import SchumakerSpline.evaluate, SchumakerSpline.evaluate_integral
 Evaluates the integral of an envelope between two spots.
 """
 function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = env.output_for_envelope_)
-    first_func_index = searchsortedlast(env.dd_interval_[:interval_start], lhs)
+    first_func_index = max(1, searchsortedlast(env.dd_interval_[:interval_start], lhs))
     last_func_index  = searchsortedlast(env.dd_interval_[:interval_start], rhs)
     spl_start_name   = env.dd_function_[first_func_index, :name]
     integral         = 0.0
