@@ -112,7 +112,7 @@ abs(interp - analytical_intercept) < max_interval_width
 
 # Based on the above functions
 dd_interval, dd_eval = get_upper_envelope(dd_eval, dd_function, x_name, output_for_envelope, bracketing_parameter, max_interval_width; grid = reverse(collect(grid)))
-env = Envelope(dd_interval, dd_eval, dd_function, x_name)
+env = Envelope(dd_interval, dd_eval, dd_function, x_name, output_for_envelope)
 
 
 plt = plot(env; points = true, legend = :none)
