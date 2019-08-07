@@ -118,8 +118,8 @@ function get_intercept_with_constant(dd_eval::DataFrame, func_name::Symbol, type
     dd_1 = dd_eval[dd_eval[:,:name] .== func_name , :]
     s1 =  Schumaker(dd_1[:,x_name], dd_1[:,output_for_envelope])
     # Finding roots
-    roots = find_roots(s1; root_value = constant)[:roots]
-    root_in_interval = roots[(roots .>= interval[1]-10*eps()) .& (roots .<= interval[2]+10*eps())]
+    roots = find_roots(s1; root_value = constant, interval = interval)[:roots]
+    root_in_interval = roots #roots[(roots .>= interval[1]-10*eps()) .& (roots .<= interval[2]+10*eps())]
     num_roots = length(root_in_interval)
     if num_roots == 0
         error("No roots were found. Potentially more evaluations of this function are needed.")
