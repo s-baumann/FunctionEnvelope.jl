@@ -7,6 +7,8 @@ using Plots
 using Distributions
 using Random
 
+using BSON
+
 include("1_structs.jl")
 export make_function_dataframe
 include("2_evaluate_functions.jl")

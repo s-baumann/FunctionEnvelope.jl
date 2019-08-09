@@ -74,7 +74,7 @@ grid = reverse(0.0001:step:0.9999)
 dd_eval = crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = true)
 
 
-x_array = sort(unique(dd_eval[x_name]))
+x_array = sort(unique(dd_eval[!,x_name]))
 bracketing_parameter = 0.8
 max_interval_width = 0.01
 func_name = :func_inc2
@@ -118,3 +118,6 @@ env = Envelope(dd_interval, dd_eval, dd_function, x_name, output_for_envelope)
 plt = plot(env; points = true, legend = :none)
 plt
 plot(plt; legend=:best)
+
+# Testing nice syntax for evaluation.
+abs(env(1.0) - 2.998) < 1e-2

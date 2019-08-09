@@ -8,24 +8,24 @@ struct Envelope
     chance_of_function_::Multinomial
     funcs_::Array{Symbol,1}
     function Envelope(dd_interval::DataFrame, dd_eval::DataFrame, dd_function::DataFrame, x_name::Symbol, output_for_envelope::Symbol)
-         func_names = dd_function[:name]
+         func_names = dd_function[!,:name]
          val_names  = names(dd_eval)[(names(dd_eval) .!= :name) .& (names(dd_eval) .!= x_name)]
          splines = Dict{Symbol,Dict{Symbol,Schumaker}}()
          for name in val_names
              name_d = Dict{Symbol,Schumaker}()
              for func in func_names
-                 data = dd_eval[dd_eval[:name] .== func,:]
-                 if sum(ismissing.(data[name])) > 0 continue end
-                 schum = Schumaker(data[x_name], data[name])
+                 data = dd_eval[dd_eval[!,:name] .== func,:]
+                 if sum(ismissing.(data[!,name])) > 0 continue end
+                 schum = Schumaker(data[!,x_name], data[!,name])
                  name_d[func] = schum
              end
              splines[name] = name_d
          end
          mass_by_func = by(dd_interval, :func, mass = :length => sum)
-         total_mass   = sum(mass_by_func[:mass])
-         mass_by_func[:mass] .= mass_by_func[:mass] ./ total_mass
-         chance_of_function_ = Multinomial(1, mass_by_func[:mass])
-         return new(dd_interval, dd_eval, dd_function, x_name, output_for_envelope, splines, chance_of_function_, mass_by_func[:func])
+         total_mass   = sum(mass_by_func[!,:mass])
+         mass_by_func[!,:mass] .= mass_by_func[!,:mass] ./ total_mass
+         chance_of_function_ = Multinomial(1, mass_by_func[!,:mass])
+         return new(dd_interval, dd_eval, dd_function, x_name, output_for_envelope, splines, chance_of_function_, mass_by_func[!,:func])
     end
 
     function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen}, output_for_envelope::Symbol, x_name::Symbol = :x;
@@ -44,9 +44,9 @@ import SchumakerSpline.evaluate, SchumakerSpline.evaluate_integral
 Evaluates the integral of an envelope between two spots.
 """
 function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = env.output_for_envelope_)
-    first_func_index = max(1, searchsortedlast(env.dd_interval_[:interval_start], lhs))
-    last_func_index  = searchsortedlast(env.dd_interval_[:interval_start], rhs)
-    spl_start_name   = env.dd_function_[first_func_index, :name]
+    first_func_index = max(1, searchsortedlast(env.dd_interval_[!,:interval_start], lhs))
+    last_func_index  = searchsortedlast(env.dd_interval_[!,:interval_start], rhs)
+    spl_start_name   = env.dd_interval_[first_func_index, :func]
     integral         = 0.0
     if first_func_index == last_func_index
         #  If all is in the same interval.
@@ -55,7 +55,7 @@ function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = en
     else
         # Start and end components
         integral  += evaluate_integral(env.splines_[var][spl_start_name], lhs, env.dd_interval_[first_func_index,:interval_end])
-        spl_end_name = env.dd_function_[last_func_index, :name]
+        spl_end_name = env.dd_interval_[last_func_index, :func]
         integral  += evaluate_integral(env.splines_[var][spl_end_name], env.dd_interval_[last_func_index,:interval_start], rhs)
     end
     if last_func_index - first_func_index == 1
@@ -70,6 +70,10 @@ function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = en
     return integral
 end
 
+function top_function_at_point(env::Envelope, x::Real)
+    return env.dd_interval_[searchsortedlast(env.dd_interval_[!,:interval_start], x),:func]
+end
+
 """
     evaluate(env::Envelope, x::Real, output_for_envelope::Symbol = env.output_for_envelope_; derivative::Integer = 0)
 Evaluates an upper envelope at a particular coordinate. It can also estimate other inputs on the same intervals and derivatives.
@@ -79,6 +83,10 @@ function evaluate(env::Envelope, x::Real, output_for_envelope::Symbol = env.outp
     top_spline = env.splines_[output_for_envelope][top_spline_name]
     return evaluate(top_spline, x, derivative)
 end
+function (env::Envelope)(x::Real, derivative::Integer = 0)
+    return evaluate(env, x, env.output_for_envelope_; derivative = derivative)
+end
+
 
 
 

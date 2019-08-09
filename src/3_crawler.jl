@@ -19,23 +19,23 @@ end
 
 function maximum_possible_value(target::Real, dd_function::DataFrame, dd_eval::DataFrame,
                                 output_for_envelope::Symbol, x_name::Symbol)
-    dic = Dict{Symbol,typeof(dd_eval[output_for_envelope][1])}()
+    dic = Dict{Symbol,typeof(dd_eval[!,output_for_envelope][1])}()
     for i in 1:size(dd_function)[1]
         name = dd_function[i,:name]
         type = dd_function[i,:type]
-        reduced_evals = dd_eval[dd_eval[:name] .== name,:]
+        reduced_evals = dd_eval[dd_eval[!,:name] .== name,:]
         if type == :Constant
             dic[name] = dd_function[i,:func][String(output_for_envelope)]
         elseif type == :Increasing
-            index     = searchsortedlast(reduced_evals[x_name], target)+1
-            if index > length(reduced_evals[x_name])
+            index     = searchsortedlast(reduced_evals[!,x_name], target)+1
+            if index > length(reduced_evals[!,x_name])
                 dic[name] = Inf
             else
                 dic[name] = reduced_evals[index,output_for_envelope]
             end
             dic[name] = reduced_evals[index,output_for_envelope]
         elseif type == :Decreasing
-            index     = searchsortedfirst(reduced_evals[x_name], target)-1
+            index     = searchsortedfirst(reduced_evals[!,x_name], target)-1
             if index < 1
                 dic[name] = Inf
             else
@@ -63,7 +63,7 @@ function functions_potentially_above_mark(marc::Real, max_vals::Dict{Symbol,T}) 
 end
 
 function top_function_at_point(dd_eval::DataFrame, x_name::Symbol, output_for_envelope::Symbol, point::Real, tol = 1e-14)
-    dd_at_point = dd_eval[abs.(dd_eval[x_name] .- point) .< tol,:]
+    dd_at_point = dd_eval[abs.(dd_eval[!,x_name] .- point) .< tol,:]
     len = size(dd_at_point)[1]
     if len == 0 error("No functions evaluated at this point") end
     return sort(dd_at_point, output_for_envelope)[len, :name]
@@ -109,21 +109,27 @@ get_intercept_with_constant(dd_eval::DataFrame, func_name::Symbol, type::Symbol,
 Get an intercept between a function and a constant.
 """
 function get_intercept_with_constant(dd_eval::DataFrame, func_name::Symbol, type::Symbol, constant::Real, dd_function::DataFrame, interval::Tuple{R,R}, x_name::Symbol, output_for_envelope::Symbol,
-                                     bracketing_parameter::Real, max_interval_width::Real; recursion_count = 1, recursion_limit = 100) where R <:Real
+                                     bracketing_parameter::Real, max_interval_width::Real; recursion_count = 1, recursion_limit = 1000) where R <:Real
     if recursion_count > recursion_limit
         error("We have gone over the recursion limit in the function get_intercept_with_constant. This can happen if bracketing_parameter is too close to 1.")
     end
     @assert (type == :Increasing) | (type == :Decreasing) "No constant or unspecified functions can be used in the get intercept with constant function."
     # Making the first function
-    dd_1 = dd_eval[dd_eval[:,:name] .== func_name , :]
+    dd_1 = dd_eval[dd_eval[!,:name] .== func_name , :]
     s1 =  Schumaker(dd_1[:,x_name], dd_1[:,output_for_envelope])
     # Finding roots
     roots = find_roots(s1; root_value = constant, interval = interval)[:roots]
     root_in_interval = roots #roots[(roots .>= interval[1]-10*eps()) .& (roots .<= interval[2]+10*eps())]
     num_roots = length(root_in_interval)
     if num_roots == 0
+        bson(string("C:\\Dropbox\\Stuart\\Julia_Library\\debug\\debug.bson"),
+             Dict(["dd_eval", "func_name", "type", "constant", "dd_function", "interval", "x_name", "output_for_envelope", "bracketing_parameter", "max_interval_width", "recursion_count", "recursion_limit", "s1"] .=>
+                    [dd_eval, func_name, type, constant, dd_function, interval, x_name, output_for_envelope, bracketing_parameter, max_interval_width, recursion_count, recursion_limit, s1]))
         error("No roots were found. Potentially more evaluations of this function are needed.")
     elseif num_roots > 1
+        println("func_name = ", func_name)
+        println("type = ", type)
+        println("constant = ", constant)
         error("This package does not support multiple roots in an interval.")
     end
     if abs(interval[2] - interval[1]) < max_interval_width
@@ -223,6 +229,6 @@ function get_upper_envelope(dd_eval::DataFrame, dd_function::DataFrame, x_name::
         end
     end
     interval_dd[i,:interval_end] = grid[length(grid)]
-    interval_dd[:length] = interval_dd[:interval_end] .- interval_dd[:interval_start]
+    interval_dd[!,:length] .= interval_dd[!,:interval_end] .- interval_dd[!,:interval_start]
     return interval_dd, dd_eval
 end
