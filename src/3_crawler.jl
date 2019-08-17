@@ -122,9 +122,6 @@ function get_intercept_with_constant(dd_eval::DataFrame, func_name::Symbol, type
     root_in_interval = roots #roots[(roots .>= interval[1]-10*eps()) .& (roots .<= interval[2]+10*eps())]
     num_roots = length(root_in_interval)
     if num_roots == 0
-        bson(string("C:\\Dropbox\\Stuart\\Julia_Library\\debug\\debug.bson"),
-             Dict(["dd_eval", "func_name", "type", "constant", "dd_function", "interval", "x_name", "output_for_envelope", "bracketing_parameter", "max_interval_width", "recursion_count", "recursion_limit", "s1"] .=>
-                    [dd_eval, func_name, type, constant, dd_function, interval, x_name, output_for_envelope, bracketing_parameter, max_interval_width, recursion_count, recursion_limit, s1]))
         error("No roots were found. Potentially more evaluations of this function are needed.")
     elseif num_roots > 1
         println("func_name = ", func_name)
