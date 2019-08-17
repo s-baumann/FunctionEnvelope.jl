@@ -28,9 +28,9 @@ struct Envelope
          return new(dd_interval, dd_eval, dd_function, x_name, output_for_envelope, splines, chance_of_function_, mass_by_func[!,:func])
     end
 
-    function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen}, output_for_envelope::Symbol,  x_name::Symbol = :x;
-                      do_all_at_ends::Bool = true, bracketing_parameter::Real = 0.8, max_interval_width::Real = 0.01)
-        dd_eval = crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends)
+    function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen,UnitRange}, output_for_envelope::Symbol,  x_name::Symbol = :x;
+                      do_all_at_ends::Bool = true, bracketing_parameter::Real = 0.8, max_interval_width::Real = 0.01, additional_points_for_all_functions::AbstractArray = Array{typeof(grid[1]),1}([]))
+        dd_eval = crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends, additional_points_for_all_functions = additional_points_for_all_functions)
         dd_interval, dd_eval = get_upper_envelope(dd_eval, dd_function, x_name, output_for_envelope, bracketing_parameter, max_interval_width; grid = sort(grid))
         return Envelope(dd_interval, dd_eval, dd_function, x_name, output_for_envelope)
     end
@@ -97,8 +97,8 @@ function sample_envelope_given_func(env::Envelope, func_name::Symbol, var::Symbo
 end
 
 function sample_envelope_given_func(env::Envelope, func_name::Symbol, var::Symbol, quantile::Real; derivative::Integer = 0)
-    func_dd = env.dd_interval_[env.dd_interval_[:func] .== func_name,:]
-    func_mass = sum(func_dd[:interval_end] .- func_dd[:interval_start])
+    func_dd = env.dd_interval_[env.dd_interval_[!,:func] .== func_name,:]
+    func_mass = sum(func_dd[!,:interval_end] .- func_dd[!,:interval_start])
     distance_to_point = func_mass * quantile
     final_x = NaN
     for i in 1:size(func_dd)[1]

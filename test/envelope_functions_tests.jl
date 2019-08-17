@@ -1,4 +1,3 @@
-using FunctionEnvelope
 using DataFrames
 using NamedArrays
 using SchumakerSpline
@@ -63,3 +62,4 @@ sample_envelope_given_func(env, :func_inc3, :utility, 0.9)
 twister = MersenneTwister(1)
 var = :utility
 func_name, x, y = sample_envelope(env, var, twister; derivative = 0)
+x < 1

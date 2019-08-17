@@ -1,4 +1,9 @@
-function initial_evaluations(dd_function::DataFrame, limits::Tuple{T,T}, step_right_to_left::Bool, x_name::Symbol, output_for_envelope::Symbol; do_all_at_ends::Bool = false) where T<:Real
+"""
+    initial_evaluations(dd_function::DataFrame, limits::Tuple{T,T}, step_right_to_left::Bool, x_name::Symbol, output_for_envelope::Symbol; do_all_at_ends::Bool = false, additional_points_for_all_functions::AbstractArray) where T<:Real
+This function does evaluations on the from edge of the limits. It will do any required evaluations on the to edge (or all if the optional parameter specified it).
+It will additionally evaluate all functions at each of the points specified in the do_all_points optional parameter.
+"""
+function initial_evaluations(dd_function::DataFrame, limits::Tuple{T,T}, step_right_to_left::Bool, x_name::Symbol, output_for_envelope::Symbol; do_all_at_ends::Bool = false, additional_points_for_all_functions::AbstractArray = Array{T,1}([])) where T<:Real
     from_side = limits[1+convert(Int,step_right_to_left)]
     to_side = limits[2-convert(Int,step_right_to_left)]
     dd_eval = DataFrame()
@@ -8,10 +13,15 @@ function initial_evaluations(dd_function::DataFrame, limits::Tuple{T,T}, step_ri
         # Everything gets done on the from side
         # On the to side we need decreasings if we step right to left and increasings if we step left to right.
         output, dd_eval = get_function_value(dd_eval, dd_function, from_side, func_name, x_name, output_for_envelope)
-        #output, dd = evaluate_function_and_add_to_dd(dd, func,from_side,name,x_name, output_for_envelope)
         if ((type == :Decreasing) & step_right_to_left) | ((type == :Increasing) & (!step_right_to_left)) | do_all_at_ends
             output, dd_eval = get_function_value(dd_eval, dd_function, to_side, func_name, x_name, output_for_envelope)
-            #output, dd = evaluate_function_and_add_to_dd(dd, func,to_side,name,x_name, output_for_envelope)
+        end
+    end
+    # Now doing additional optional points.
+    for x in additional_points_for_all_functions
+        for i in 1:size(dd_function)[1]
+            func_name = dd_function[i,:name]
+            output, dd_eval = get_function_value(dd_eval, dd_function, x, func_name, x_name, output_for_envelope)
         end
     end
     return dd_eval
@@ -73,16 +83,16 @@ end
 This crawls from one side to the other to get the top function value at each point in a grid.
 """
 function crawler(dd_function::DataFrame, limits::Tuple{T,T}, stepp::R, x_name::Symbol, output_for_envelope::Symbol;
-                 step_right_to_left::Bool = true, do_all_at_ends::Bool = false) where T<:Real where R<:Real
+                 step_right_to_left::Bool = true, do_all_at_ends::Bool = false,additional_points_for_all_functions::AbstractArray = Array{promote_type(T,R),1}([])) where T<:Real where R<:Real
     grid = limits[1]:step:limits[2]
     if step_right_to_left grid = reverse(grid) end
     return crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends)
 end
-function crawler(dd_function::DataFrame, grid::Union{Array,StepRangeLen}, x_name::Symbol, output_for_envelope::Symbol; do_all_at_ends::Bool = false)
+function crawler(dd_function::DataFrame, grid::Union{Array,StepRangeLen,UnitRange}, x_name::Symbol, output_for_envelope::Symbol; do_all_at_ends::Bool = false, additional_points_for_all_functions::AbstractArray = Array{typeof(grid[1]),1}([]))
     limits = (min(grid[1], grid[length(grid)]), max(grid[1], grid[length(grid)]))
     step_right_to_left = issorted(reverse(grid))
     if !step_right_to_left & !issorted(grid) error("The input grid must be strictly increasing or strictly decreasing") end
-    dd_eval = initial_evaluations(dd_function, limits, step_right_to_left, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends)
+    dd_eval = initial_evaluations(dd_function, limits, step_right_to_left, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends, additional_points_for_all_functions = additional_points_for_all_functions)
     top_function_at_last_point = top_function_at_point(dd_eval, x_name, output_for_envelope, grid[1])
     for i in 2:length(grid)
         target = grid[i]
