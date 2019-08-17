@@ -28,12 +28,11 @@ struct Envelope
          return new(dd_interval, dd_eval, dd_function, x_name, output_for_envelope, splines, chance_of_function_, mass_by_func[!,:func])
     end
 
-    function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen}, output_for_envelope::Symbol, x_name::Symbol = :x;
+    function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen}, output_for_envelope::Symbol,  x_name::Symbol = :x;
                       do_all_at_ends::Bool = true, bracketing_parameter::Real = 0.8, max_interval_width::Real = 0.01)
         dd_eval = crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends)
         dd_interval, dd_eval = get_upper_envelope(dd_eval, dd_function, x_name, output_for_envelope, bracketing_parameter, max_interval_width; grid = sort(grid))
-        env = Envelope(dd_interval, dd_eval, dd_function, x_name, output_for_envelope)
-        return env
+        return Envelope(dd_interval, dd_eval, dd_function, x_name, output_for_envelope)
     end
 end
 
@@ -43,20 +42,20 @@ import SchumakerSpline.evaluate, SchumakerSpline.evaluate_integral
     evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = env.output_for_envelope_)
 Evaluates the integral of an envelope between two spots.
 """
-function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = env.output_for_envelope_)
+function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, variable::Symbol = env.output_for_envelope_)
     first_func_index = max(1, searchsortedlast(env.dd_interval_[!,:interval_start], lhs))
     last_func_index  = searchsortedlast(env.dd_interval_[!,:interval_start], rhs)
     spl_start_name   = env.dd_interval_[first_func_index, :func]
     integral         = 0.0
     if first_func_index == last_func_index
         #  If all is in the same interval.
-        integral  += evaluate_integral(env.splines_[var][spl_start_name], lhs, rhs)
+        integral  += evaluate_integral(env.splines_[variable][spl_start_name], lhs, rhs)
         return integral
     else
         # Start and end components
-        integral  += evaluate_integral(env.splines_[var][spl_start_name], lhs, env.dd_interval_[first_func_index,:interval_end])
+        integral  += evaluate_integral(env.splines_[variable][spl_start_name], lhs, env.dd_interval_[first_func_index,:interval_end])
         spl_end_name = env.dd_interval_[last_func_index, :func]
-        integral  += evaluate_integral(env.splines_[var][spl_end_name], env.dd_interval_[last_func_index,:interval_start], rhs)
+        integral  += evaluate_integral(env.splines_[variable][spl_end_name], env.dd_interval_[last_func_index,:interval_start], rhs)
     end
     if last_func_index - first_func_index == 1
         # If start and end components are all they are.
@@ -65,7 +64,7 @@ function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, var::Symbol = en
     other_intervals = (first_func_index+1):1:(last_func_index-1)
     for i in other_intervals
         spl_name = env.dd_function_[i, :name]
-        integral  += evaluate_integral(env.splines_[var][spl_name], env.dd_interval_[i,:interval_start], env.dd_interval_[i,:interval_end])
+        integral  += evaluate_integral(env.splines_[variable][spl_name], env.dd_interval_[i,:interval_start], env.dd_interval_[i,:interval_end])
     end
     return integral
 end
