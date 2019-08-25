@@ -29,7 +29,7 @@ struct Envelope
     end
 
     function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen,UnitRange}, output_for_envelope::Symbol,  x_name::Symbol = :x;
-                      do_all_at_ends::Bool = true, bracketing_parameter::Real = 0.8, max_interval_width::Real = 0.01, additional_points_for_all_functions::AbstractArray = Array{typeof(grid[1]),1}([]))
+                      do_all_at_ends::Bool = true, bracketing_parameter::Real = 0.8, max_interval_width::Real = 1E-08, additional_points_for_all_functions::AbstractArray = Array{typeof(grid[1]),1}([]))
         dd_eval = crawler(dd_function, grid, x_name, output_for_envelope; do_all_at_ends = do_all_at_ends, additional_points_for_all_functions = additional_points_for_all_functions)
         dd_interval, dd_eval = get_upper_envelope(dd_eval, dd_function, x_name, output_for_envelope, bracketing_parameter, max_interval_width; grid = sort(grid))
         return Envelope(dd_interval, dd_eval, dd_function, x_name, output_for_envelope)

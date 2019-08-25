@@ -129,21 +129,25 @@ function get_intercept_with_constant(dd_eval::DataFrame, func_name::Symbol, type
     s1 =  Schumaker(dd_1[:,x_name], dd_1[:,output_for_envelope])
     # Finding roots
     roots = find_roots(s1; root_value = constant, interval = interval)[:roots]
-    root_in_interval = roots #roots[(roots .>= interval[1]-10*eps()) .& (roots .<= interval[2]+10*eps())]
-    num_roots = length(root_in_interval)
+    num_roots = length(roots)
     if num_roots == 0
         error("No roots were found. Potentially more evaluations of this function are needed.")
-    elseif num_roots > 1
-        println("func_name = ", func_name)
-        println("type = ", type)
-        println("constant = ", constant)
-        error("This package does not support multiple roots in an interval.")
+    elseif num_roots > 1 # This can happen when a function is nearly flat which results in the schumaker spline adding some turns to it which makes it cross the constant more than once.
+        # We will jusst select the first which should be fine.
+        roots = [roots[1]]
+        #bson(string("C:\\Dropbox\\Stuart\\Julia_Library\\debug\\FunctionEnvelope_MultipleRootsInInterval.bson"),
+        #     Dict(["dd_eval", "func_name", "type", "constant", "dd_function", "interval", "x_name", "output_for_envelope", "bracketing_parameter", "max_interval_width", "recursion_count", "recursion_limit"] .=>
+        #            [dd_eval, func_name, type, constant, dd_function, interval, x_name, output_for_envelope, bracketing_parameter, max_interval_width, recursion_count, recursion_limit]))
+        #println("func_name = ", func_name)
+        #println("type = ", type)
+        #println("constant = ", constant)
+        #error("This package does not support multiple roots in an interval.")
     end
     if abs(interval[2] - interval[1]) < max_interval_width
-        return root_in_interval[1], dd_eval
+        return roots[1], dd_eval
     end
     # Finding point to try.
-    point_to_try =  (1-bracketing_parameter) * (sum(interval)/2) + bracketing_parameter * (root_in_interval[1])
+    point_to_try =  (1-bracketing_parameter) * (sum(interval)/2) + bracketing_parameter * (roots[1])
     # Now trying this point and saving it in dd_eval.
     result, dd_eval = get_function_value(dd_eval, dd_function, point_to_try, func_name, x_name, output_for_envelope)
     # Now using the result to make a smaller interval.

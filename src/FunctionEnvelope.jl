@@ -1,11 +1,13 @@
 module FunctionEnvelope
 
+#'using BSON
 using DataFrames
 using NamedArrays
 using SchumakerSpline
 using Plots
 using Distributions
 using Random
+
 
 include("1_structs.jl")
 export make_function_dataframe
