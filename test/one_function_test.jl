@@ -1,4 +1,3 @@
-using FunctionEnvelope
 using DataFrames
 using NamedArrays
 using SchumakerSpline
