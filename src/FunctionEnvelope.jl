@@ -1,6 +1,6 @@
 module FunctionEnvelope
 
-#'using BSON
+using BSON
 using DataFrames
 using NamedArrays
 using SchumakerSpline
