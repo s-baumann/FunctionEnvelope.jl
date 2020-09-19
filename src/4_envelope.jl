@@ -8,24 +8,27 @@ struct Envelope
     chance_of_function_::Multinomial
     funcs_::Array{Symbol,1}
     function Envelope(dd_interval::DataFrame, dd_eval::DataFrame, dd_function::DataFrame, x_name::Symbol, output_for_envelope::Symbol)
-         func_names = dd_function[!,:name]
-         val_names  = names(dd_eval)[(names(dd_eval) .!= :name) .& (names(dd_eval) .!= x_name)]
+         func_names = dd_function[:,:name]
+         nams = Symbol.(names(dd_eval))
+         val_names  = nams[(nams .!= :name) .& (nams .!= x_name)]
          splines = Dict{Symbol,Dict{Symbol,Schumaker}}()
-         for name in val_names
+         for var_name in val_names
              name_d = Dict{Symbol,Schumaker}()
              for func in func_names
-                 data = dd_eval[dd_eval[!,:name] .== func,:]
-                 if sum(ismissing.(data[!,name])) > 0 continue end
-                 schum = Schumaker(data[!,x_name], data[!,name])
-                 name_d[func] = schum
+                 data = dd_eval[dd_eval[:,:name] .== func,:]
+                 if sum(ismissing.(data[:,var_name])) > 0 continue end
+                 schum = Schumaker(data[:,x_name], data[:,var_name])
+                 name_d[Symbol(func)] = schum
              end
-             splines[name] = name_d
+             splines[Symbol(var_name)] = name_d
          end
-         mass_by_func = by(dd_interval, :func, mass = :length => sum)
-         total_mass   = sum(mass_by_func[!,:mass])
-         mass_by_func[!,:mass] .= mass_by_func[!,:mass] ./ total_mass
-         chance_of_function_ = Multinomial(1, mass_by_func[!,:mass])
-         return new(dd_interval, dd_eval, dd_function, x_name, output_for_envelope, splines, chance_of_function_, mass_by_func[!,:func])
+         #mass_by_func = by(dd_interval, :func, mass = :length => sum)
+         mass_by_func = combine(groupby(dd_interval, :func), [:length => (sum => :mass)]...)
+
+         total_mass   = sum(mass_by_func[:,:mass])
+         mass_by_func[!,:mass] .= mass_by_func[:,:mass] ./ total_mass
+         chance_of_function_ = Multinomial(1, mass_by_func[:,:mass])
+         return new(dd_interval, dd_eval, dd_function, x_name, output_for_envelope, splines, chance_of_function_, mass_by_func[:,:func])
     end
 
     function Envelope(dd_function::DataFrame, grid::Union{Array,StepRangeLen,UnitRange}, output_for_envelope::Symbol,  x_name::Symbol = :x;
@@ -63,7 +66,7 @@ function evaluate_integral(env::Envelope, lhs::Real, rhs::Real, variable::Symbol
     end
     other_intervals = (first_func_index+1):1:(last_func_index-1)
     for i in other_intervals
-        spl_name = env.dd_function_[i, :name]
+        spl_name = env.dd_interval_[i, :func]
         integral  += evaluate_integral(env.splines_[variable][spl_name], env.dd_interval_[i,:interval_start], env.dd_interval_[i,:interval_end])
     end
     return integral

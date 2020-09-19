@@ -2,6 +2,7 @@ using DataFrames
 using NamedArrays
 using SchumakerSpline
 using Random
+using FunctionEnvelope
 
 bounds = (0.0, 1.0)
 x_name = :alpha

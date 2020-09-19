@@ -131,7 +131,14 @@ function get_intercept_with_constant(dd_eval::DataFrame, func_name::Symbol, type
     roots = find_roots(s1; root_value = constant, interval = interval)[:roots]
     num_roots = length(roots)
     if num_roots == 0
-        error("No roots were found. Potentially more evaluations of this function are needed.")
+        bson(string("C:\\Dropbox\\Stuart\\Julia_Library\\debug\\FunctionEnvelope_NoRootsInInterval.bson"),
+             Dict(["dd_eval", "func_name", "type", "constant", "dd_function", "interval", "x_name", "output_for_envelope", "bracketing_parameter", "max_interval_width", "recursion_count", "recursion_limit"] .=>
+                    [dd_eval, func_name, type, constant, dd_function, interval, x_name, output_for_envelope, bracketing_parameter, max_interval_width, recursion_count, recursion_limit]))
+        # This is probably happening when we are rootfinding. Unfortunately we have got into an interval with no intercept. This can happen when our most recent evaluation changes the spline so a
+        # root is narrowly excluded. We will just pick an edge.
+        roots = [abs(s1(interval[1])) < abs(s1(interval[2])) ? interval[1] : interval[2]]
+        return roots[1], dd_eval
+        #error("No roots were found. Potentially more evaluations of this function are needed.")
     elseif num_roots > 1 # This can happen when a function is nearly flat which results in the schumaker spline adding some turns to it which makes it cross the constant more than once.
         # We will jusst select the first which should be fine.
         roots = [roots[1]]
